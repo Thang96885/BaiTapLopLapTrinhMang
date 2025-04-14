@@ -106,33 +106,28 @@ namespace BaiTapLopLapTrinhMang
 						if (message == "DISCONNECT")
 						{
 							UpdateStatus("Server requested disconnection.");
-							Disconnect(); // Use the public method to handle UI updates
+							Disconnect();
 							break;
 						}
-						else if (message == "PING") // Server is checking if we are alive
+						else if (message == "PING")
 						{
 							byte[] response = Encoding.ASCII.GetBytes("PONG");
 							await _stream.WriteAsync(response, 0, response.Length, token);
 							UpdateStatus("Sent: PONG");
 						}
-						// REMOVED: HELLO/MAC response logic - server doesn't send HELLO anymore for keep-alive
-						// else if (message == "HELLO") { ... }
-
-						// Keep PONG response logic if server explicitly sends PONG (unlikely now)
-						// else if (message == "PONG") { UpdateStatus("Received: PONG"); }
 
 						else if (message == "SHUTDOWN")
 						{
 							UpdateStatus("Server requested computer shutdown.");
-							ShutdownComputer(); // This will also call Disconnect
+							ShutdownComputer();
 							break;
 						}
-						// Potentially handle other messages if needed
+
 					}
 					else
 					{
-						// Read returned 0 bytes, usually means graceful remote closure
-						if (_isConnected) // Check if disconnect wasn't initiated locally
+
+						if (_isConnected) 
 						{
 							UpdateStatus("Server disconnected gracefully.");
 							Disconnect();
@@ -169,15 +164,13 @@ namespace BaiTapLopLapTrinhMang
 			}
 		}
 
-		// REMOVED: KeepAliveAsync method is no longer needed.
-		// private async Task KeepAliveAsync(CancellationToken token) { ... }
 
 		private void Disconnect()
 		{
-			if (!_isConnected && _client == null) return; // Already disconnected or not connected yet
+			if (!_isConnected && _client == null) return;
 
-			_isConnected = false; // Set state first
-			DisconnectInternal(); // Perform actual cleanup
+			_isConnected = false;
+			DisconnectInternal(); 
 
 			// Update UI on the correct thread
 			if (InvokeRequired)
@@ -198,22 +191,21 @@ namespace BaiTapLopLapTrinhMang
 
 		private void DisconnectInternal()
 		{
-			// Cancel ongoing operations
-			_cts?.Cancel();
-			_cts?.Dispose(); // Dispose the CTS
-			_cts = new CancellationTokenSource(); // Create a new one for potential reuse (though ConnectAsync also does this)
 
-			// Close stream and client safely
-			try { _stream?.Close(); } catch { /* Ignore */ }
-			try { _client?.Close(); } catch { /* Ignore */ }
+			_cts?.Cancel();
+			_cts?.Dispose();
+			_cts = new CancellationTokenSource(); 
+
+
+			try { _stream?.Close(); } catch {}
+			try { _client?.Close(); } catch {  }
 			_stream = null;
-			_client = null; // Set to null after closing
+			_client = null; 
 		}
 
 
 		private string GetMacAddress()
 		{
-			// Ensure client and its socket are valid before accessing endpoints
 			if (_client?.Client != null && _client.Client.LocalEndPoint != null)
 			{
 				var localEndPoint = _client.Client.LocalEndPoint as IPEndPoint;
@@ -227,10 +219,10 @@ namespace BaiTapLopLapTrinhMang
 
 					string macAddress = NetworkHelper.GetMacAddress(localIP);
 					Console.WriteLine($"MAC Address for {localIP}: {macAddress}");
-					return macAddress ?? "Unknown MAC"; // Return "Unknown MAC" if helper returns null
+					return macAddress ?? "Unknown MAC";
 				}
 			}
-			else if (_isConnected) // If we think we are connected but can't get endpoint
+			else if (_isConnected)
 			{
 				UpdateStatus("Warning: Could not determine local endpoint to find MAC address.");
 			}
@@ -240,7 +232,7 @@ namespace BaiTapLopLapTrinhMang
 
 		private void UpdateStatus(string message)
 		{
-			if (IsDisposed || !IsHandleCreated) return; // Prevent invoking on disposed form
+			if (IsDisposed || !IsHandleCreated) return;
 
 			if (InvokeRequired)
 			{
@@ -248,7 +240,7 @@ namespace BaiTapLopLapTrinhMang
 				{
 					Invoke((Action)(() => UpdateStatus(message)));
 				}
-				catch (ObjectDisposedException) { /* Form closing, ignore */ }
+				catch (ObjectDisposedException) {  }
 				return;
 			}
 			thongBaoRtbx.AppendText($"{DateTime.Now}: {message}\n");
@@ -259,26 +251,26 @@ namespace BaiTapLopLapTrinhMang
 
 		private bool CheckForm()
 		{
-			errorProvider1.Clear(); // Clear previous errors
+			errorProvider1.Clear();
 			if (string.IsNullOrWhiteSpace(serverIpAddressTbx.Text) || !NetworkHelper.IsValidIP(serverIpAddressTbx.Text))
 			{
 				errorProvider1.SetError(serverIpAddressTbx, "Invalid IP address");
 				return false;
 			}
-			// No need to set error provider to "" explicitly, Clear() does it.
+
 			return true;
 		}
 
 		private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			// Check _isConnected state before calling Disconnect
+
 			if (_isConnected)
 			{
 				Disconnect();
 			}
 			else
 			{
-				// Ensure CTS is cancelled even if not fully connected
+				
 				_cts?.Cancel();
 				_cts?.Dispose();
 			}
@@ -289,7 +281,6 @@ namespace BaiTapLopLapTrinhMang
 		{
 			try
 			{
-				// Use /f to force closing applications
 				System.Diagnostics.Process.Start("shutdown", "/s /f /t 0");
 				UpdateStatus("Attempting to shut down computer...");
 			}
@@ -299,14 +290,12 @@ namespace BaiTapLopLapTrinhMang
 			}
 			finally
 			{
-				// Disconnect regardless of shutdown success/failure
 				Disconnect();
 			}
 		}
 
 		private void thongBaoRtbx_TextChanged(object sender, EventArgs e)
 		{
-			// Optional: Limit the amount of text in the RichTextBox
 			const int MAX_LINES = 500;
 			if (thongBaoRtbx.Lines.Length > MAX_LINES)
 			{

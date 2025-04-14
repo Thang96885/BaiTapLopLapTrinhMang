@@ -138,6 +138,7 @@
 			tatMayTinhBtn.TabIndex = 6;
 			tatMayTinhBtn.Text = "Turn off computer";
 			tatMayTinhBtn.UseVisualStyleBackColor = false;
+			tatMayTinhBtn.Click += tatMayTinhBtn_Click;
 			// 
 			// button1
 			// 
