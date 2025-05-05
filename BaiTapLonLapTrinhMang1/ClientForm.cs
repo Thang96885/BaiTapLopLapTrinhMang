@@ -94,7 +94,6 @@ namespace BaiTapLopLapTrinhMang
 
 			try
 			{
-
 				while (_isConnected && _client.Connected && !token.IsCancellationRequested)
 				{
 					int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, token);
@@ -142,28 +141,25 @@ namespace BaiTapLopLapTrinhMang
 			}
 			catch (System.IO.IOException ioEx) when (ioEx.InnerException is SocketException se && (se.SocketErrorCode == SocketError.ConnectionReset || se.SocketErrorCode == SocketError.ConnectionAborted))
 			{
-				if (_isConnected) // Only log if we didn't initiate the disconnect
+				if (_isConnected)
 				{
 					UpdateStatus($"Connection lost: {se.SocketErrorCode}");
 					Disconnect();
 				}
 			}
-			catch (Exception ex) when (_isConnected) // Catch other exceptions only if we thought we were connected
+			catch (Exception ex) when (_isConnected) 
 			{
 				UpdateStatus($"Connection error: {ex.Message}");
 				Disconnect();
 			}
 			finally
 			{
-				// Ensure cleanup happens even if loop exits unexpectedly,
-				// but only if Disconnect wasn't already called.
 				if (_isConnected)
 				{
 					Disconnect();
 				}
 			}
 		}
-
 
 		private void Disconnect()
 		{

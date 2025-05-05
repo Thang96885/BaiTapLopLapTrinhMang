@@ -154,30 +154,30 @@ namespace BaiTapLopLapTrinhMang
 				UpdateStatus($"Server started on {ipAddress}:{settings.PortNumber}. Listening...");
 				Console.WriteLine("Server started. Listening for connections...");
 
-				// Run client acceptance in the background
+				// Chạy trong nền
 				_ = Task.Run(() => AcceptClientsAsync(_cts.Token), _cts.Token);
 			}
-			catch (SocketException sockEx) // Bắt lỗi cụ thể hơn
+			catch (SocketException sockEx)
 			{
 				UpdateStatus($"Error starting server (Socket): {sockEx.Message} (Error Code: {sockEx.SocketErrorCode})");
-				ShutdownServer(); // Ensure cleanup on error
+				ShutdownServer();
 			}
 			catch (Exception ex)
 			{
 				UpdateStatus($"Error starting server: {ex.Message}");
-				ShutdownServer(); // Ensure cleanup on error
+				ShutdownServer();
 			}
 		}
 
 		private async Task AcceptClientsAsync(CancellationToken token)
 		{
 			UpdateStatus("Accept loop started.");
-			while (!token.IsCancellationRequested) // Check token primarily
+			while (!token.IsCancellationRequested) 
 			{
 				try
 				{
 					TcpClient client = await _listener.AcceptTcpClientAsync();
-					// Check token again after await
+					
 					if (token.IsCancellationRequested)
 					{
 						client.Close();
@@ -185,7 +185,7 @@ namespace BaiTapLopLapTrinhMang
 					}
 
 					IPEndPoint endpoint = client.Client.RemoteEndPoint as IPEndPoint;
-					if (endpoint == null) // Kiểm tra phòng trường hợp RemoteEndPoint không phải IPEndPoint
+					if (endpoint == null)
 					{
 						UpdateStatus("Failed to get client endpoint. Closing connection.");
 						client.Close();
@@ -196,33 +196,30 @@ namespace BaiTapLopLapTrinhMang
 					UpdateStatus($"Client attempting connection from {clientId}");
 
 					var clientInfo = new ClientInfo(endpoint.Address.ToString(), endpoint.Port, "Pending MAC...");
-					clientInfo.LastActivity = DateTime.UtcNow; // Set initial activity time
+					clientInfo.LastActivity = DateTime.UtcNow;
 
 					if (_clients.TryAdd(clientId, (client, clientInfo)))
 					{
-						// Add to BindingList on UI thread
-						// Sử dụng BeginInvoke để không chặn luồng Accept nếu UI đang bận
+						
 						BeginInvoke((Action)(() =>
 						{
-							if (!_listClient.Any(c => c.ClientId == clientId)) // Kiểm tra trùng lặp trước khi thêm vào UI list
+							if (!_listClient.Any(c => c.ClientId == clientId)) 
 							{
 								_listClient.Add(clientInfo);
 							}
 						}));
 						UpdateStatus($"Client connected: {clientId}");
 
-						// Handle client communication in a separate task
 						_ = Task.Run(() => HandleClientAsync(client, clientId, token), token);
 					}
 					else
 					{
 						UpdateStatus($"Failed to add client {clientId} to dictionary (already exists?). Closing connection.");
-						client.Close(); // Close the duplicate connection attempt
+						client.Close(); 
 					}
 				}
 				catch (ObjectDisposedException) when (token.IsCancellationRequested || _listener == null)
 				{
-					// Listener was stopped, expected during shutdown
 					UpdateStatus("Listener stopped, exiting accept loop.");
 					break;
 				}
@@ -231,15 +228,14 @@ namespace BaiTapLopLapTrinhMang
 					UpdateStatus($"Socket exception during accept (likely shutdown): {se.Message}");
 					break;
 				}
-				catch (SocketException se) // Lỗi socket khác khi đang chạy
+				catch (SocketException se)
 				{
 					UpdateStatus($"Socket error accepting client: {se.Message}");
-					await Task.Delay(100, CancellationToken.None); // Delay trước khi thử lại
+					await Task.Delay(100, CancellationToken.None);
 				}
 				catch (Exception ex) when (!token.IsCancellationRequested)
 				{
 					UpdateStatus($"Error accepting client: {ex.GetType().Name} - {ex.Message}");
-					// Optional: Delay slightly before retrying to prevent tight loop on persistent errors
 					await Task.Delay(100, CancellationToken.None);
 				}
 			}
@@ -250,11 +246,11 @@ namespace BaiTapLopLapTrinhMang
 		private async Task HandleClientAsync(TcpClient client, string clientId, CancellationToken token)
 		{
 			NetworkStream stream = null;
-			string clientDesc = clientId; // Mô tả client để dùng trong log/lỗi
+			string clientDesc = clientId;
 
 			try
 			{
-				clientDesc = client.Client.RemoteEndPoint?.ToString() ?? clientId; // Lấy thông tin mới nhất nếu có
+				clientDesc = client.Client.RemoteEndPoint?.ToString() ?? clientId;
 				stream = client.GetStream();
 				byte[] buffer = new byte[1024];
 
@@ -269,7 +265,6 @@ namespace BaiTapLopLapTrinhMang
 
 						if (_clients.TryGetValue(clientId, out var clientTuple))
 						{
-
 							clientTuple.info.LastActivity = DateTime.UtcNow;
 						}
 						else
@@ -285,21 +280,19 @@ namespace BaiTapLopLapTrinhMang
 						{
 
 						}
-						else if (message.Equals("PING", StringComparison.OrdinalIgnoreCase))
+/*						else if (message.Equals("PING", StringComparison.OrdinalIgnoreCase))
 						{
 							byte[] response = Encoding.ASCII.GetBytes("PONG");
 							await stream.WriteAsync(response, 0, response.Length, CancellationToken.None);
 							UpdateStatus($"Sent PONG to {clientDesc} (in response to unexpected PING)");
-						}
+						}*/
 						else
 						{
-							// Mặc định là MAC address hoặc tin nhắn khác
 							UpdateClientMac(clientId, message);
 						}
 					}
 					else
 					{
-						// Read 0 bytes: Client đóng kết nối một cách bình thường
 						UpdateStatus($"Client {clientDesc} disconnected gracefully (read 0 bytes).");
 						break;
 					}
@@ -307,12 +300,10 @@ namespace BaiTapLopLapTrinhMang
 			}
 			catch (OperationCanceledException) when (token.IsCancellationRequested)
 			{
-				// Bị hủy bỏ do server shutdown hoặc lý do khác từ token gốc
 				UpdateStatus($"Handling canceled for client {clientDesc} (Server shutdown?).");
 			}
 			catch (OperationCanceledException)
 			{
-				// Bị hủy bỏ do timeout đọc (nếu dùng CancelAfter trên readCts)
 				UpdateStatus($"Read timeout for client {clientDesc}.");
 			}
 			catch (IOException ioEx)
@@ -339,7 +330,7 @@ namespace BaiTapLopLapTrinhMang
 
 				try { stream?.Close(); } catch (Exception ex) { UpdateStatus($"Error closing stream for {clientDesc}: {ex.Message}"); }
 				try { client?.Close(); } catch (Exception ex) { UpdateStatus($"Error closing client {clientDesc}: {ex.Message}"); }
-				client?.Dispose(); // Gọi Dispose để giải phóng hoàn toàn
+				client?.Dispose();
 
 				UpdateStatus($"Finished handling and cleanup for client {clientDesc}.");
 			}
@@ -448,7 +439,6 @@ namespace BaiTapLopLapTrinhMang
 			UpdateStatus("Server shut down complete.");
 			Console.WriteLine("Server shut down.");
 
-			// Giải phóng CTS cũ và tạo mới nếu cần khởi động lại
 			_cts?.Dispose();
 			_cts = new CancellationTokenSource();
 
@@ -458,7 +448,7 @@ namespace BaiTapLopLapTrinhMang
 				StartStopBtn.Text = "Start";
 				ipAddressCbx.Enabled = true;
 				portNup.Enabled = true;
-				timer1.Stop(); // Đảm bảo timer dừng
+				timer1.Stop();
 				UpdateStatus("UI controls re-enabled.");
 			};
 			if (InvokeRequired)
@@ -718,7 +708,6 @@ namespace BaiTapLopLapTrinhMang
 						NetworkStream stream = client.GetStream();
 						byte[] pingMessage = Encoding.ASCII.GetBytes("PING");
 
-
 						using (var writeCts = new CancellationTokenSource(_pingInterval.Subtract(TimeSpan.FromSeconds(1)))) // Timeout gửi < ping interval
 						using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, writeCts.Token))
 						{
@@ -929,8 +918,6 @@ namespace BaiTapLopLapTrinhMang
 		private void ServerForm_Load_1(object sender, EventArgs e)
 		{
 
-		}
-
-		
+		}	
 	}
 }
