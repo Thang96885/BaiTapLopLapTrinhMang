@@ -26,6 +26,7 @@ namespace BaiTapLopLapTrinhMang
 
 		private readonly TimeSpan _clientTimeout = TimeSpan.FromSeconds(30);
 		private readonly TimeSpan _pingInterval = TimeSpan.FromSeconds(10);
+		private const int UDP_BROADCAST_PORT = 8888;
 
 		public ServerForm()
 		{
@@ -172,12 +173,12 @@ namespace BaiTapLopLapTrinhMang
 		private async Task AcceptClientsAsync(CancellationToken token)
 		{
 			UpdateStatus("Accept loop started.");
-			while (!token.IsCancellationRequested) 
+			while (!token.IsCancellationRequested)
 			{
 				try
 				{
 					TcpClient client = await _listener.AcceptTcpClientAsync();
-					
+
 					if (token.IsCancellationRequested)
 					{
 						client.Close();
@@ -200,10 +201,10 @@ namespace BaiTapLopLapTrinhMang
 
 					if (_clients.TryAdd(clientId, (client, clientInfo)))
 					{
-						
+
 						BeginInvoke((Action)(() =>
 						{
-							if (!_listClient.Any(c => c.ClientId == clientId)) 
+							if (!_listClient.Any(c => c.ClientId == clientId))
 							{
 								_listClient.Add(clientInfo);
 							}
@@ -215,7 +216,7 @@ namespace BaiTapLopLapTrinhMang
 					else
 					{
 						UpdateStatus($"Failed to add client {clientId} to dictionary (already exists?). Closing connection.");
-						client.Close(); 
+						client.Close();
 					}
 				}
 				catch (ObjectDisposedException) when (token.IsCancellationRequested || _listener == null)
@@ -280,12 +281,12 @@ namespace BaiTapLopLapTrinhMang
 						{
 
 						}
-/*						else if (message.Equals("PING", StringComparison.OrdinalIgnoreCase))
-						{
-							byte[] response = Encoding.ASCII.GetBytes("PONG");
-							await stream.WriteAsync(response, 0, response.Length, CancellationToken.None);
-							UpdateStatus($"Sent PONG to {clientDesc} (in response to unexpected PING)");
-						}*/
+						/*						else if (message.Equals("PING", StringComparison.OrdinalIgnoreCase))
+												{
+													byte[] response = Encoding.ASCII.GetBytes("PONG");
+													await stream.WriteAsync(response, 0, response.Length, CancellationToken.None);
+													UpdateStatus($"Sent PONG to {clientDesc} (in response to unexpected PING)");
+												}*/
 						else
 						{
 							UpdateClientMac(clientId, message);
@@ -918,6 +919,44 @@ namespace BaiTapLopLapTrinhMang
 		private void ServerForm_Load_1(object sender, EventArgs e)
 		{
 
-		}	
+		}
+
+
+
+		private void button2_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				if (_listener == null)
+				{
+					MessageBox.Show("Can not start find client, server does not start.");
+					UpdateStatus("Cand not send boardcast. Server does not start");
+					return;
+				}
+
+				IPEndPoint endPoint = (IPEndPoint)_listener.LocalEndpoint;
+				string serverIp = endPoint.Address.ToString();
+				int serverPort = endPoint.Port;
+
+				string broadcastMessage = $"CONNECT:{serverIp}:{serverPort}";
+				byte[] data = Encoding.ASCII.GetBytes(broadcastMessage);
+
+
+				using (UdpClient udpClient = new UdpClient())
+				{
+					udpClient.EnableBroadcast = true;
+
+					IPEndPoint broadcastEndPoint = new IPEndPoint(IPAddress.Broadcast, UDP_BROADCAST_PORT);
+
+					udpClient.Send(data, data.Length, broadcastEndPoint);
+
+					UpdateStatus($"Sent boardcast: {broadcastMessage}");
+				}
+			}
+			catch (Exception ex)
+			{
+				UpdateStatus($"Error when sent broadcast: {ex.Message}");
+			}
+		}
 	}
 }

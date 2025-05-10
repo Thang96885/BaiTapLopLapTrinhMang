@@ -16,10 +16,126 @@ namespace BaiTapLopLapTrinhMang
 		private NetworkStream _stream;
 		private CancellationTokenSource _cts = new CancellationTokenSource();
 
+		// UDP listener components
+		private UdpClient _udpListener;
+		private const int UDP_PORT = 8888; // Port for UDP broadcast reception
+		private IPEndPoint _broadcastEndPoint;
+		private CancellationTokenSource _udpCts = new CancellationTokenSource();
+
 		public ClientForm()
 		{
 			InitializeComponent();
 			_client = new TcpClient();
+
+			// Initialize and start UDP listener when form is created
+			InitializeUdpListener();
+		}
+
+		private void InitializeUdpListener()
+		{
+			try
+			{
+				_udpListener = new UdpClient();
+				_udpListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+				_broadcastEndPoint = new IPEndPoint(IPAddress.Any, UDP_PORT);
+				_udpListener.Client.Bind(_broadcastEndPoint);
+
+				UpdateStatus("UDP listener initialized on port " + UDP_PORT);
+
+				// Start listening for broadcast messages
+				_ = Task.Run(() => ListenForBroadcastsAsync(_udpCts.Token), _udpCts.Token);
+			}
+			catch (Exception ex)
+			{
+				UpdateStatus($"Failed to initialize UDP listener: {ex.Message}");
+			}
+		}
+
+		private async Task ListenForBroadcastsAsync(CancellationToken token)
+		{
+			try
+			{
+				UpdateStatus("Starting to listen for server broadcasts...");
+
+				while (!token.IsCancellationRequested)
+				{
+					UdpReceiveResult result = await _udpListener.ReceiveAsync();
+					string message = Encoding.ASCII.GetString(result.Buffer);
+					UpdateStatus($"Received broadcast: {message}");
+
+					ProcessBroadcastMessage(message, result.RemoteEndPoint);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				UpdateStatus("UDP listening canceled.");
+			}
+			catch (Exception ex)
+			{
+				UpdateStatus($"UDP listening error: {ex.Message}");
+
+				await Task.Delay(5000, CancellationToken.None);
+				if (!token.IsCancellationRequested)
+				{
+					_ = Task.Run(() => ListenForBroadcastsAsync(token), token);
+				}
+			}
+		}
+
+		private void ProcessBroadcastMessage(string message, IPEndPoint remoteEndPoint)
+		{
+			try
+			{
+				// chuỗi gửi đến sẽ như sau "CONNECT:192.168.1.100:9000"
+				if (message.StartsWith("CONNECT:"))
+				{
+					string[] parts = message.Substring(8).Split(':');
+					if (parts.Length == 2 && IPAddress.TryParse(parts[0], out IPAddress serverIp) && int.TryParse(parts[1], out int serverPort))
+					{
+						UpdateStatus($"Server {serverIp}:{serverPort} is requesting connection");
+
+						if (InvokeRequired)
+						{
+							Invoke((Action)(() => AskToConnect(serverIp.ToString(), serverPort)));
+						}
+						else
+						{
+							AskToConnect(serverIp.ToString(), serverPort);
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				UpdateStatus($"Error processing broadcast message: {ex.Message}");
+			}
+		}
+
+		private void AskToConnect(string serverIp, int serverPort)
+		{
+			if (_isConnected)
+			{
+				UpdateStatus("Already connected to a server. Ignoring connection request.");
+				return;
+			}
+
+			DialogResult result = MessageBox.Show(
+				$"Server at {serverIp}:{serverPort} is requesting connection. Do you want to connect?",
+				"Connection Request",
+				MessageBoxButtons.YesNo,
+				MessageBoxIcon.Question);
+
+			if (result == DialogResult.Yes)
+			{
+				serverIpAddressTbx.Text = serverIp;
+				serverPortNud.Value = serverPort;
+
+				ConnectBtn_Click(this, EventArgs.Empty);
+			}
+			else
+			{
+				UpdateStatus("Connection request declined by user.");
+			}
 		}
 
 		private async void ConnectBtn_Click(object sender, EventArgs e)
@@ -126,7 +242,7 @@ namespace BaiTapLopLapTrinhMang
 					else
 					{
 
-						if (_isConnected) 
+						if (_isConnected)
 						{
 							UpdateStatus("Server disconnected gracefully.");
 							Disconnect();
@@ -147,7 +263,7 @@ namespace BaiTapLopLapTrinhMang
 					Disconnect();
 				}
 			}
-			catch (Exception ex) when (_isConnected) 
+			catch (Exception ex) when (_isConnected)
 			{
 				UpdateStatus($"Connection error: {ex.Message}");
 				Disconnect();
@@ -166,7 +282,7 @@ namespace BaiTapLopLapTrinhMang
 			if (!_isConnected && _client == null) return;
 
 			_isConnected = false;
-			DisconnectInternal(); 
+			DisconnectInternal();
 
 			// Update UI on the correct thread
 			if (InvokeRequired)
@@ -190,13 +306,13 @@ namespace BaiTapLopLapTrinhMang
 
 			_cts?.Cancel();
 			_cts?.Dispose();
-			_cts = new CancellationTokenSource(); 
+			_cts = new CancellationTokenSource();
 
 
-			try { _stream?.Close(); } catch {}
-			try { _client?.Close(); } catch {  }
+			try { _stream?.Close(); } catch { }
+			try { _client?.Close(); } catch { }
 			_stream = null;
-			_client = null; 
+			_client = null;
 		}
 
 
@@ -236,7 +352,7 @@ namespace BaiTapLopLapTrinhMang
 				{
 					Invoke((Action)(() => UpdateStatus(message)));
 				}
-				catch (ObjectDisposedException) {  }
+				catch (ObjectDisposedException) { }
 				return;
 			}
 			thongBaoRtbx.AppendText($"{DateTime.Now}: {message}\n");
@@ -259,6 +375,11 @@ namespace BaiTapLopLapTrinhMang
 
 		private void ClientForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			// Clean up UDP resources
+			_udpCts?.Cancel();
+			_udpCts?.Dispose();
+			_udpListener?.Close();
+			_udpListener?.Dispose();
 
 			if (_isConnected)
 			{
@@ -266,7 +387,6 @@ namespace BaiTapLopLapTrinhMang
 			}
 			else
 			{
-				
 				_cts?.Cancel();
 				_cts?.Dispose();
 			}

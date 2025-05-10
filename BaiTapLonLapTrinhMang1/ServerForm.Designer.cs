@@ -41,6 +41,7 @@
 			timer1 = new System.Windows.Forms.Timer(components);
 			tatMayTinhBtn = new Button();
 			button1 = new Button();
+			button2 = new Button();
 			groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)portNup).BeginInit();
 			((System.ComponentModel.ISupportInitialize)ClientInfoDgv).BeginInit();
@@ -150,11 +151,22 @@
 			button1.UseVisualStyleBackColor = true;
 			button1.Click += button1_Click;
 			// 
+			// button2
+			// 
+			button2.Location = new Point(154, 152);
+			button2.Name = "button2";
+			button2.Size = new Size(94, 29);
+			button2.TabIndex = 8;
+			button2.Text = "Search all";
+			button2.UseVisualStyleBackColor = true;
+			button2.Click += button2_Click;
+			// 
 			// ServerForm
 			// 
 			AutoScaleDimensions = new SizeF(8F, 20F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(780, 451);
+			Controls.Add(button2);
 			Controls.Add(button1);
 			Controls.Add(tatMayTinhBtn);
 			Controls.Add(StartStopBtn);
@@ -185,5 +197,6 @@
 		private System.Windows.Forms.Timer timer1;
 		private Button tatMayTinhBtn;
 		private Button button1;
+		private Button button2;
 	}
 }
