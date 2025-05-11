@@ -37,8 +37,6 @@
 			label2 = new Label();
 			serverPortNud = new NumericUpDown();
 			thongBaoRtbx = new RichTextBox();
-			label3 = new Label();
-			tenMayTbx = new TextBox();
 			((System.ComponentModel.ISupportInitialize)errorProvider1).BeginInit();
 			((System.ComponentModel.ISupportInitialize)serverPortNud).BeginInit();
 			SuspendLayout();
@@ -106,29 +104,11 @@
 			thongBaoRtbx.TabIndex = 5;
 			thongBaoRtbx.Text = "";
 			// 
-			// label3
-			// 
-			label3.AutoSize = true;
-			label3.Location = new Point(339, 75);
-			label3.Name = "label3";
-			label3.Size = new Size(64, 20);
-			label3.TabIndex = 6;
-			label3.Text = "Tên máy";
-			// 
-			// tenMayTbx
-			// 
-			tenMayTbx.Location = new Point(435, 72);
-			tenMayTbx.Name = "tenMayTbx";
-			tenMayTbx.Size = new Size(160, 27);
-			tenMayTbx.TabIndex = 7;
-			// 
 			// ClientForm
 			// 
 			AutoScaleDimensions = new SizeF(8F, 20F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(691, 394);
-			Controls.Add(tenMayTbx);
-			Controls.Add(label3);
+			ClientSize = new Size(694, 394);
 			Controls.Add(thongBaoRtbx);
 			Controls.Add(serverPortNud);
 			Controls.Add(label2);
@@ -153,7 +133,5 @@
 		private NumericUpDown serverPortNud;
 		private Label label2;
 		private RichTextBox thongBaoRtbx;
-		private TextBox tenMayTbx;
-		private Label label3;
 	}
 }

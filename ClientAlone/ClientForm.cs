@@ -1,5 +1,6 @@
 ﻿using BaiTapLopLapTrinhMang.Helpers;
 using System;
+using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -28,16 +29,6 @@ namespace BaiTapLopLapTrinhMang
 			_client = new TcpClient();
 
 			InitializeUdpListener();
-
-			try
-			{
-				string content = File.ReadAllText("file.txt");
-				tenMayTbx.Text = content;
-			}
-			catch (Exception ex)
-			{
-				tenMayTbx.Text = "Default PC";
-			} 
 			
 		}
 
@@ -189,7 +180,8 @@ namespace BaiTapLopLapTrinhMang
 				UpdateStatus("Connected to server.");
 				Console.WriteLine("Connected to server.");
 
-				string macAddress = GetMacAddress();
+				string macAddress = GetAllInformation();
+				
 				byte[] data = Encoding.ASCII.GetBytes(macAddress);
 
 				await _stream.WriteAsync(data, 0, data.Length, _cts.Token);
@@ -341,8 +333,8 @@ namespace BaiTapLopLapTrinhMang
 
 					string macAddress = NetworkHelper.GetMacAddress(localIP);
 					Console.WriteLine($"MAC Address for {localIP}: {macAddress}");
-					if (macAddress == "")
-						return "Unknow Mac";
+					if(macAddress == "")
+						return "Unknown MAC";
 					return macAddress ?? "Unknown MAC";
 				}
 			}
@@ -419,6 +411,62 @@ namespace BaiTapLopLapTrinhMang
 			finally
 			{
 				Disconnect();
+			}
+		}
+
+		private string GetAllInformation()
+		{
+			var Mac = GetMacAddress();
+			var systemInfo = GetSystemInformation();
+
+			return Mac + "\n" + systemInfo;
+		}
+
+		private string GetSystemInformation()
+		{
+			try
+			{
+				StringBuilder systemInfo = new StringBuilder();
+
+				// Get OS information
+				ManagementObjectSearcher osSearcher = new ManagementObjectSearcher("SELECT Caption, Version FROM Win32_OperatingSystem");
+				foreach (ManagementObject os in osSearcher.Get())
+				{
+					systemInfo.AppendLine($"Operating System: {os["Caption"]}");
+					systemInfo.AppendLine($"Version: {os["Version"]}");
+				}
+
+				// Get Computer information
+				ManagementObjectSearcher computerSearcher = new ManagementObjectSearcher("SELECT Manufacturer, Model, TotalPhysicalMemory FROM Win32_ComputerSystem");
+				foreach (ManagementObject computer in computerSearcher.Get())
+				{
+					systemInfo.AppendLine($"Manufacturer: {computer["Manufacturer"]}");
+					systemInfo.AppendLine($"Model: {computer["Model"]}");
+
+					// Convert bytes to GB with 2 decimal places
+					double ramGB = Math.Round(Convert.ToDouble(computer["TotalPhysicalMemory"]) / 1073741824, 2);
+					systemInfo.AppendLine($"RAM: {ramGB} GB");
+				}
+
+				// Get CPU information
+				ManagementObjectSearcher cpuSearcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
+				foreach (ManagementObject cpu in cpuSearcher.Get())
+				{
+					systemInfo.AppendLine($"CPU: {cpu["Name"]}");
+				}
+
+				// Get BIOS information
+				ManagementObjectSearcher biosSearcher = new ManagementObjectSearcher("SELECT SMBIOSBIOSVersion FROM Win32_BIOS");
+				foreach (ManagementObject bios in biosSearcher.Get())
+				{
+					systemInfo.AppendLine($"BIOS: {bios["SMBIOSBIOSVersion"]}");
+				}
+
+				return systemInfo.ToString();
+			}
+			catch (Exception ex)
+			{
+				return $"Error retrieving system information: {ex.Message}";
 			}
 		}
 

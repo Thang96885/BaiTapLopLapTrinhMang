@@ -10,6 +10,7 @@ namespace BaiTapLopLapTrinhMang1.Models
 		private string _ipAddress;
 		private int _port;
 		private string _macAddress;
+		private string _systemInfo;
 		private DateTime _lastActivity;
 
 		public string IpAddress
@@ -17,6 +18,7 @@ namespace BaiTapLopLapTrinhMang1.Models
 			get => _ipAddress;
 			set { _ipAddress = value; OnPropertyChanged(); }
 		}
+
 		public int Port
 		{
 			get => _port;
@@ -31,6 +33,11 @@ namespace BaiTapLopLapTrinhMang1.Models
 		{
 			get => _lastActivity;
 			set { _lastActivity = value; OnPropertyChanged(); }
+		}
+		public string SystemInfo
+		{
+			get => _systemInfo;
+			set { _systemInfo = value; OnPropertyChanged(); }
 		}
 
 		public ClientInfo(string ipAddress, int port, string macAddress)

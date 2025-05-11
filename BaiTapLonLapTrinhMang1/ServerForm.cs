@@ -47,38 +47,40 @@ namespace BaiTapLopLapTrinhMang
 			_listClient.AllowRemove = true;
 			_listClient.AllowEdit = true;
 			ClientInfoDgv.DataSource = _listClient;
-		}
-		private void ServerForm_Load(object sender, EventArgs e)
-		{
-			ConfigureDataGridViewColumns();
+
+			ClientInfoDgv.AutoGenerateColumns = false;
+
+			ClientInfoDgv.Columns.Clear();
+
+			// Add columns with explicit mapping to ClientInfo properties
+			DataGridViewTextBoxColumn idColumn = new DataGridViewTextBoxColumn();
+			idColumn.DataPropertyName = "ClientId";
+			idColumn.HeaderText = "Client ID";
+			idColumn.Name = "ClientIdColumn";
+			ClientInfoDgv.Columns.Add(idColumn);
+
+			DataGridViewTextBoxColumn ipColumn = new DataGridViewTextBoxColumn();
+			ipColumn.DataPropertyName = "IpAddress";
+			ipColumn.HeaderText = "IP Address";
+			ipColumn.Name = "IpAddressColumn";
+			ClientInfoDgv.Columns.Add(ipColumn);
+
+			DataGridViewTextBoxColumn portColumn = new DataGridViewTextBoxColumn();
+			portColumn.DataPropertyName = "Port";
+			portColumn.HeaderText = "Port";
+			portColumn.Name = "PortColumn";
+			ClientInfoDgv.Columns.Add(portColumn);
+
+			DataGridViewTextBoxColumn macColumn = new DataGridViewTextBoxColumn();
+			macColumn.DataPropertyName = "MacAddress";
+			macColumn.HeaderText = "MAC Address";
+			macColumn.Name = "MacAddressColumn";
+			ClientInfoDgv.Columns.Add(macColumn);
+
+			ClientInfoDgv.DataSource = _listClient;
 		}
 
-		private void ConfigureDataGridViewColumns()
-		{
-			try
-			{
-				if (ClientInfoDgv.Columns["IpAddress"] != null)
-					ClientInfoDgv.Columns["IpAddress"].HeaderText = "IP Address";
-				if (ClientInfoDgv.Columns["Port"] != null)
-					ClientInfoDgv.Columns["Port"].HeaderText = "Port";
-				if (ClientInfoDgv.Columns["MacAddress"] != null)
-					ClientInfoDgv.Columns["MacAddress"].HeaderText = "MAC Address";
-				if (ClientInfoDgv.Columns["LastActivity"] != null)
-				{
-					ClientInfoDgv.Columns["LastActivity"].HeaderText = "Last Activity (UTC)";
-					ClientInfoDgv.Columns["LastActivity"].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss";
-				}
-				if (ClientInfoDgv.Columns["ClientId"] != null)
-					ClientInfoDgv.Columns["ClientId"].Visible = false;
-
-				ClientInfoDgv.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Error configuring DataGridView columns on Load: {ex.Message}");
-				MessageBox.Show($"Error configuring DataGridView columns: {ex.Message}", "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-			}
-		}
+		
 
 
 		private async void StartStopBtn_Click(object sender, EventArgs e)
@@ -281,12 +283,6 @@ namespace BaiTapLopLapTrinhMang
 						{
 
 						}
-						/*						else if (message.Equals("PING", StringComparison.OrdinalIgnoreCase))
-												{
-													byte[] response = Encoding.ASCII.GetBytes("PONG");
-													await stream.WriteAsync(response, 0, response.Length, CancellationToken.None);
-													UpdateStatus($"Sent PONG to {clientDesc} (in response to unexpected PING)");
-												}*/
 						else
 						{
 							UpdateClientMac(clientId, message);
@@ -508,7 +504,12 @@ namespace BaiTapLopLapTrinhMang
 				ClientInfo info = clientTuple.info;
 				if (info.MacAddress != macAddress)
 				{
-					info.MacAddress = macAddress;
+					var divideInfo = SplitStringIntoFirstAndRest(macAddress);
+
+
+
+					info.MacAddress = divideInfo.FirstLine;
+					info.SystemInfo = divideInfo.RestOfLines;
 					UpdateStatus($"Updated MAC for {clientId} to {macAddress}");
 
 					ResetBindingListItem(info);
@@ -518,6 +519,22 @@ namespace BaiTapLopLapTrinhMang
 			{
 				UpdateStatus($"Warning: Cannot update MAC for non-existent client ID: {clientId}");
 			}
+		}
+
+		(string FirstLine, string RestOfLines) SplitStringIntoFirstAndRest(string input)
+		{
+			if (string.IsNullOrEmpty(input))
+			{
+				return ("", "");
+			}
+
+			string[] lines = input.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+
+			string firstLine = lines[0];
+
+			string restOfLines = lines.Length > 1 ? string.Join(Environment.NewLine, lines.Skip(1)) : "";
+
+			return (firstLine, restOfLines);
 		}
 
 
@@ -957,6 +974,27 @@ namespace BaiTapLopLapTrinhMang
 			{
 				UpdateStatus($"Error when sent broadcast: {ex.Message}");
 			}
+		}
+
+		private void button3_Click(object sender, EventArgs e)
+		{
+			if (!_isRunning)
+			{
+				MessageBox.Show("Server is not running.", "Server Offline", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+			if (ClientInfoDgv.SelectedRows.Count == 0)
+			{
+				MessageBox.Show("Please select a client from the table to disconnect.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+			var selectedRow = ClientInfoDgv.SelectedRows[0];
+
+		    var clientInfo = _listClient.Where(c => c.ClientId == selectedRow.Cells[0].Value.ToString()).FirstOrDefault();
+
+			MessageBox.Show(clientInfo.SystemInfo, "Pc system information");
 		}
 	}
 }
