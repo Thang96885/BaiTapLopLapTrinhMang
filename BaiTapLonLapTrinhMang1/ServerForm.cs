@@ -59,6 +59,12 @@ namespace BaiTapLopLapTrinhMang
 			idColumn.Name = "ClientIdColumn";
 			ClientInfoDgv.Columns.Add(idColumn);
 
+			DataGridViewTextBoxColumn clientNameColumn = new DataGridViewTextBoxColumn();
+			clientNameColumn.DataPropertyName = "ClientName";
+			clientNameColumn.HeaderText = "Client Name";
+			clientNameColumn.Name = "ClientNameColumn";
+			ClientInfoDgv.Columns.Add(clientNameColumn);
+
 			DataGridViewTextBoxColumn ipColumn = new DataGridViewTextBoxColumn();
 			ipColumn.DataPropertyName = "IpAddress";
 			ipColumn.HeaderText = "IP Address";
@@ -504,11 +510,12 @@ namespace BaiTapLopLapTrinhMang
 				ClientInfo info = clientTuple.info;
 				if (info.MacAddress != macAddress)
 				{
-					var divideInfo = SplitStringIntoFirstAndRest(macAddress);
+					var divideInfo = SplitStringIntoThreeParts(macAddress);
 
 
 
 					info.MacAddress = divideInfo.FirstLine;
+					info.ClientName = divideInfo.SecondLine;
 					info.SystemInfo = divideInfo.RestOfLines;
 					UpdateStatus($"Updated MAC for {clientId} to {macAddress}");
 
@@ -521,20 +528,20 @@ namespace BaiTapLopLapTrinhMang
 			}
 		}
 
-		(string FirstLine, string RestOfLines) SplitStringIntoFirstAndRest(string input)
+		(string FirstLine, string SecondLine, string RestOfLines) SplitStringIntoThreeParts(string input)
 		{
 			if (string.IsNullOrEmpty(input))
 			{
-				return ("", "");
+				return ("", "", "");
 			}
 
 			string[] lines = input.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
 
-			string firstLine = lines[0];
+			string firstLine = lines.Length > 0 ? lines[0] : "";
+			string secondLine = lines.Length > 1 ? lines[1] : "";
+			string restOfLines = lines.Length > 2 ? string.Join(Environment.NewLine, lines.Skip(2)) : "";
 
-			string restOfLines = lines.Length > 1 ? string.Join(Environment.NewLine, lines.Skip(1)) : "";
-
-			return (firstLine, restOfLines);
+			return (firstLine, secondLine, restOfLines);
 		}
 
 

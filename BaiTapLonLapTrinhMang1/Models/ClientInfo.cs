@@ -8,10 +8,17 @@ namespace BaiTapLopLapTrinhMang1.Models
 	public class ClientInfo : INotifyPropertyChanged
 	{
 		private string _ipAddress;
+		private string _clientName;
 		private int _port;
 		private string _macAddress;
 		private string _systemInfo;
 		private DateTime _lastActivity;
+
+		public string ClientName
+		{
+			get { return _clientName; }
+			set { _clientName = value; OnPropertyChanged(); }
+		}
 
 		public string IpAddress
 		{

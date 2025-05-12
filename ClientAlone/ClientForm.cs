@@ -1,4 +1,5 @@
 ﻿using BaiTapLopLapTrinhMang.Helpers;
+using IWshRuntimeLibrary;
 using System;
 using System.Management;
 using System.Net;
@@ -29,7 +30,26 @@ namespace BaiTapLopLapTrinhMang
 			_client = new TcpClient();
 
 			InitializeUdpListener();
-			
+
+			//AddShortcutToStartup();
+
+		}
+
+		private void AddShortcutToStartup()
+		{
+			string startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+			string shortcutPath = Path.Combine(startupFolder, "MyApp.lnk");
+
+			if (!System.IO.File.Exists(shortcutPath))
+			{
+				WshShell shell = new WshShell();
+				IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+				shortcut.TargetPath = Application.ExecutablePath;
+				shortcut.WorkingDirectory = Application.StartupPath;
+				shortcut.WindowStyle = 1;
+				shortcut.Description = "Khởi động MyApp cùng Windows";
+				shortcut.Save();
+			}
 		}
 
 		private void InitializeUdpListener()
@@ -181,7 +201,7 @@ namespace BaiTapLopLapTrinhMang
 				Console.WriteLine("Connected to server.");
 
 				string macAddress = GetAllInformation();
-				
+
 				byte[] data = Encoding.ASCII.GetBytes(macAddress);
 
 				await _stream.WriteAsync(data, 0, data.Length, _cts.Token);
@@ -333,7 +353,7 @@ namespace BaiTapLopLapTrinhMang
 
 					string macAddress = NetworkHelper.GetMacAddress(localIP);
 					Console.WriteLine($"MAC Address for {localIP}: {macAddress}");
-					if(macAddress == "")
+					if (macAddress == "")
 						return "Unknown MAC";
 					return macAddress ?? "Unknown MAC";
 				}
@@ -414,12 +434,16 @@ namespace BaiTapLopLapTrinhMang
 			}
 		}
 
+
 		private string GetAllInformation()
 		{
 			var Mac = GetMacAddress();
+			var clientName = tenMayTbx.Text;
+			if (clientName == "")
+				clientName = "Default client";
 			var systemInfo = GetSystemInformation();
 
-			return Mac + "\n" + systemInfo;
+			return Mac + Environment.NewLine + clientName + Environment.NewLine + systemInfo;
 		}
 
 		private string GetSystemInformation()
